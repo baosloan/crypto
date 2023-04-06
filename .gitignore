@@ -1,0 +1,5 @@
+.idea/
+.DS_Store
+storage/
+main.go
+crypto
