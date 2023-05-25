@@ -3,6 +3,7 @@ package aes
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"encoding/base64"
 	"errors"
 	"github.com/baosloan/crypto/utils"
 )
@@ -19,7 +20,7 @@ const (
 // src: 待加密的数据
 // key:秘钥
 // mode: 分组模式 目前支持 CBC、CFB、ECB
-func Encrypt(src string, key string, mode encryptMode) ([]byte, error) {
+func Encrypt(src string, key string, mode encryptMode) (string, error) {
 	switch mode {
 	case ModeCBC:
 		return encryptCBC([]byte(src), []byte(key))
@@ -28,11 +29,11 @@ func Encrypt(src string, key string, mode encryptMode) ([]byte, error) {
 	case ModeECB:
 		return encryptECB([]byte(src), []byte(key))
 	default:
-		return nil, errors.New("不支持的分组模式")
+		return "", errors.New("不支持的分组模式")
 	}
 }
 
-func Decrypt(src []byte, key string, mode encryptMode) (string, error) {
+func Decrypt(src string, key string, mode encryptMode) (string, error) {
 	switch mode {
 	case ModeCBC:
 		return decryptCBC(src, []byte(key))
@@ -48,11 +49,11 @@ func Decrypt(src []byte, key string, mode encryptMode) (string, error) {
 // encryptCBC
 // plainText:明文
 // key:秘钥，16、24 或 32 字节以选择 AES-128、AES-192 或 AES-256。
-func encryptCBC(plainText []byte, key []byte) ([]byte, error) {
+func encryptCBC(plainText []byte, key []byte) (string, error) {
 	//1.创建并返回一个新的 cipher.Block。
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	//2.最后一个分组进行数据填充
@@ -65,11 +66,12 @@ func encryptCBC(plainText []byte, key []byte) ([]byte, error) {
 	//5.加密连续的数据块
 	dst := plainText
 	blockMode.CryptBlocks(dst, plainText)
-	return dst, nil
+	return base64.URLEncoding.EncodeToString(dst), nil
 }
 
 // decryptCBC AES CBC分组解密
-func decryptCBC(cipherText []byte, key []byte) (string, error) {
+func decryptCBC(cipherText string, key []byte) (string, error) {
+	cipherBytes, _ := base64.URLEncoding.DecodeString(cipherText)
 	//1.创建并返回一个新的 cipher.Block。
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -78,8 +80,8 @@ func decryptCBC(cipherText []byte, key []byte) (string, error) {
 	//2.返回一个 BlockMode，它使用给定的 Block 以密码块链接模式进行解密。
 	blockMode := cipher.NewCBCDecrypter(block, key[:block.BlockSize()])
 	//3.解密
-	dst := make([]byte, len(cipherText))
-	blockMode.CryptBlocks(dst, cipherText)
+	dst := make([]byte, len(cipherBytes))
+	blockMode.CryptBlocks(dst, cipherBytes)
 	//4.去掉尾部填充的字
 	return string(utils.PKCS5UnPadding(dst)), nil
 }
@@ -87,11 +89,11 @@ func decryptCBC(cipherText []byte, key []byte) (string, error) {
 // encryptCFB
 // plainText:明文
 // key:秘钥，16、24 或 32 字节以选择 AES-128、AES-192 或 AES-256。
-func encryptCFB(plainText []byte, key []byte) ([]byte, error) {
+func encryptCFB(plainText []byte, key []byte) (string, error) {
 	//1.创建并返回一个新的 cipher.Block。
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	//2.返回一个使用密码反馈模式加密的 Stream
@@ -102,10 +104,11 @@ func encryptCFB(plainText []byte, key []byte) ([]byte, error) {
 	//4.加密连续的数据块
 	dst := plainText
 	stream.XORKeyStream(dst, plainText)
-	return dst, nil
+	return base64.URLEncoding.EncodeToString(dst), nil
 }
 
-func decryptCFB(cipherText []byte, key []byte) (string, error) {
+func decryptCFB(cipherText string, key []byte) (string, error) {
+	cipherBytes, _ := base64.URLEncoding.DecodeString(cipherText)
 	//1.创建并返回一个新的 cipher.Block。
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -118,15 +121,15 @@ func decryptCFB(cipherText []byte, key []byte) (string, error) {
 	stream := cipher.NewCFBDecrypter(block, iv)
 
 	//4.解密连续的块
-	dst := cipherText
-	stream.XORKeyStream(dst, cipherText)
+	dst := cipherBytes
+	stream.XORKeyStream(dst, cipherBytes)
 	return string(dst), nil
 }
 
-func encryptECB(plainText []byte, key []byte) ([]byte, error) {
+func encryptECB(plainText []byte, key []byte) (string, error) {
 	block, err := aes.NewCipher(utils.GenerateKey(key))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	length := (len(plainText) + aes.BlockSize) / aes.BlockSize
 	plain := make([]byte, length*aes.BlockSize)
@@ -140,17 +143,18 @@ func encryptECB(plainText []byte, key []byte) ([]byte, error) {
 	for bs, be := 0, block.BlockSize(); bs <= len(plainText); bs, be = bs+block.BlockSize(), be+block.BlockSize() {
 		block.Encrypt(cipherText[bs:be], plain[bs:be])
 	}
-	return cipherText, nil
+	return base64.URLEncoding.EncodeToString(cipherText), nil
 }
 
-func decryptECB(cipherText []byte, key []byte) (string, error) {
+func decryptECB(cipherText string, key []byte) (string, error) {
+	cipherBytes, _ := base64.URLEncoding.DecodeString(cipherText)
 	block, err := aes.NewCipher(utils.GenerateKey(key))
 	if err != nil {
 		return "", err
 	}
-	plainText := make([]byte, len(cipherText))
-	for bs, be := 0, block.BlockSize(); bs < len(cipherText); bs, be = bs+block.BlockSize(), be+block.BlockSize() {
-		block.Decrypt(plainText[bs:be], cipherText[bs:be])
+	plainText := make([]byte, len(cipherBytes))
+	for bs, be := 0, block.BlockSize(); bs < len(cipherBytes); bs, be = bs+block.BlockSize(), be+block.BlockSize() {
+		block.Decrypt(plainText[bs:be], cipherBytes[bs:be])
 	}
 
 	trim := 0

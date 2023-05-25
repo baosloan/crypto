@@ -1,7 +1,6 @@
 package aes
 
 import (
-	"encoding/base64"
 	"log"
 	"testing"
 )
@@ -9,9 +8,9 @@ import (
 const (
 	testDataEncryptSRC    = "123456"
 	testDataEncryptKey    = "1234567812345678"
-	testDataEncryptCBCDST = "2eDiseYiSX62qk/WS/ZDmg=="
+	testDataEncryptCBCDST = "2eDiseYiSX62qk_WS_ZDmg=="
 	testDataEncryptCFBDST = "XJ4vYtJx"
-	testDataEncryptECBDST = "mdSm0RmB+xAKrTah3DG31A=="
+	testDataEncryptECBDST = "mdSm0RmB-xAKrTah3DG31A=="
 )
 
 func TestEncrypt(t *testing.T) {
@@ -20,7 +19,7 @@ func TestEncrypt(t *testing.T) {
 	if err != nil {
 		log.Fatalf("加密出错: %v\n", err)
 	}
-	if base64.StdEncoding.EncodeToString(dst) != testDataEncryptCBCDST {
+	if dst != testDataEncryptCBCDST {
 		log.Fatalf("AES-CBC加密算法有误!\n")
 	}
 	//2.AES-CFB分组
@@ -28,7 +27,7 @@ func TestEncrypt(t *testing.T) {
 	if err != nil {
 		log.Fatalf("加密出错: %v\n", err)
 	}
-	if base64.StdEncoding.EncodeToString(dst) != testDataEncryptCFBDST {
+	if dst != testDataEncryptCFBDST {
 		log.Fatalf("AES-CFB加密算法有误!\n")
 	}
 	//3.AES-ECB分组
@@ -36,15 +35,14 @@ func TestEncrypt(t *testing.T) {
 	if err != nil {
 		log.Fatalf("加密出错: %v\n", err)
 	}
-	if base64.StdEncoding.EncodeToString(dst) != testDataEncryptECBDST {
+	if dst != testDataEncryptECBDST {
 		log.Fatalf("AES-ECB加密算法有误!\n")
 	}
 }
 
 func TestDecrypt(t *testing.T) {
 	//1.AES-CBC分组
-	cipherText, _ := base64.StdEncoding.DecodeString(testDataEncryptCBCDST)
-	plainText, err := Decrypt(cipherText, testDataEncryptKey, ModeCBC)
+	plainText, err := Decrypt(testDataEncryptCBCDST, testDataEncryptKey, ModeCBC)
 	if err != nil {
 		log.Fatalf("解密出错：%v\n", err)
 	}
@@ -52,8 +50,7 @@ func TestDecrypt(t *testing.T) {
 		log.Fatalf("AES-CBC解密算法有误!\n")
 	}
 	//2.AES-CFB分组
-	cipherText, _ = base64.StdEncoding.DecodeString(testDataEncryptCFBDST)
-	plainText, err = Decrypt(cipherText, testDataEncryptKey, ModeCFB)
+	plainText, err = Decrypt(testDataEncryptCFBDST, testDataEncryptKey, ModeCFB)
 	if err != nil {
 		log.Fatalf("解密出错：%v\n", err)
 	}
@@ -61,8 +58,7 @@ func TestDecrypt(t *testing.T) {
 		log.Fatalf("AES-CFB解密算法有误!\n")
 	}
 	//3.AES-ECB分组
-	cipherText, _ = base64.StdEncoding.DecodeString(testDataEncryptECBDST)
-	plainText, err = Decrypt(cipherText, testDataEncryptKey, ModeECB)
+	plainText, err = Decrypt(testDataEncryptECBDST, testDataEncryptKey, ModeECB)
 	if err != nil {
 		log.Fatalf("解密出错：%v\n", err)
 	}
